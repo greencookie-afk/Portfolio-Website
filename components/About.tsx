@@ -8,13 +8,13 @@ const About: React.FC = () => {
                 <div className="grid md:grid-cols-3 gap-8">
                     <div className="md:col-span-2 space-y-4 text-secondary text-lg">
                         <p>
-                            Hello! I'm Mithun, a third-year B.Tech CSE student from St. Andrews (MDU) based in New Delhi NCR, India. My journey into web development is happening right now, and I'm completely hooked. I thrive on learning to build things for the web, from sleek user interfaces to robust applications.
+                            Hello! I'm Mithun, a third-year B.Tech CSE student from St. Andrews (MDU) based in Delhi NCR, India. I thrive on learning to build things for the web, from sleek user interfaces to robust applications.
                         </p>
                         <p>
                            I am currently focusing on building my skills in creating accessible, inclusive products and digital experiences. As a student, I'm always eager to learn new technologies and improve my craft.
                         </p>
                         <p>
-                            When I'm not at the computer, I'm usually playing video games, watching anime, or exploring new coffee shops in town.
+                            When I'm not at the computer, I'm usually playing video games, watching anime, exploring new coffee shops in town or having talks with someone whose name is hidden in every song I love..
                         </p>
                     </div>
                     <div className="space-y-4">
