@@ -37,6 +37,12 @@ export const ExternalLinkIcon = (props: React.SVGProps<SVGSVGElement>) => (
 // Portfolio Data
 export const experiences: Experience[] = [
     {
+        role: "1st Place Winner - Ideathon",
+        company: "College Level",
+        period: "2025",
+        description: "Positioned 1st with my team by building an AI-based deepfake & news detector and analyzer, which delivers high accuracy based on real-world model datasets."
+    },
+    {
         role: "B.Tech, Computer Science Engineering",
         company: "St. Andrews Inst. of Tech. & Management (MDU)",
         period: "2022 - 2026",
@@ -63,6 +69,25 @@ export const experiences: Experience[] = [
 ];
 
 export const projects: Project[] = [
+    {
+        title: "Konfide",
+        description: "A peer-to-peer mental health support web app. Facilitates live listener discovery and permanent encrypted chat history with a lightweight interface.",
+        tags: ["Next.js", "Tailwind CSS", "TypeScript", "PostgreSQL"],
+        githubUrl: "https://github.com/greencookie-afk/konfide",
+        liveUrl: "https://konfide-flame.vercel.app"
+    },
+    {
+        title: "Duat (Open Source Contribution)",
+        description: "Contributed to 'duat', a Rust-based highly customizable text editor. Integrated the official Night Owl colorscheme and mapped its syntax forms.",
+        tags: ["Rust", "Open Source", "Text Editor"],
+        githubUrl: "https://github.com/AhoyISki/duat/pull/51"
+    },
+    {
+        title: "CareLine",
+        description: "A focused implementation project dealing with modern infrastructure and logic solutions.",
+        tags: ["Python"],
+        githubUrl: "https://github.com/greencookie-afk/CareLine"
+    },
     {
         title: "LearnChain dApp",
         description: "A decentralized application for a learning platform, built on blockchain technology to ensure verifiable credentials and transparent interactions.",
