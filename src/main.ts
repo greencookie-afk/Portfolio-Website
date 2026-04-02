@@ -98,31 +98,40 @@ function render() {
       <div class="nav__logo">
         <span class="dot"></span>
       </div>
+      <ul class="nav__links nav__links--desktop">
+        <li><a href="#about">About</a></li>
+        <li><a href="#opensource">OSS</a></li>
+        <li><a href="#projects">Projects</a></li>
+        <li><a href="#creative">Creative</a></li>
+        <li><a href="#skills">Tech Stack</a></li>
+        <li><a href="#achievements">Achievements</a></li>
+        <li><a href="#contact">Contact</a></li>
+      </ul>
       <button
         class="nav__toggle"
         id="nav-toggle"
         type="button"
         aria-label="Open navigation menu"
         aria-expanded="false"
-        aria-controls="nav-links"
+        aria-controls="nav-drawer"
       >
         <span></span>
         <span></span>
         <span></span>
       </button>
-      <div class="nav__drawer" id="nav-drawer">
-        <ul class="nav__links" id="nav-links">
-          <li><a href="#about">About</a></li>
-          <li><a href="#opensource">OSS</a></li>
-          <li><a href="#projects">Projects</a></li>
-          <li><a href="#creative">Creative</a></li>
-          <li><a href="#skills">Tech Stack</a></li>
-          <li><a href="#achievements">Achievements</a></li>
-          <li><a href="#contact">Contact</a></li>
-        </ul>
-      </div>
       <div class="nav__time" id="nav-time"></div>
     </nav>
+    <aside class="nav__drawer" id="nav-drawer" aria-hidden="true">
+      <ul class="nav__links nav__links--mobile" id="nav-links">
+        <li><a href="#about">About</a></li>
+        <li><a href="#opensource">OSS</a></li>
+        <li><a href="#projects">Projects</a></li>
+        <li><a href="#creative">Creative</a></li>
+        <li><a href="#skills">Tech Stack</a></li>
+        <li><a href="#achievements">Achievements</a></li>
+        <li><a href="#contact">Contact</a></li>
+      </ul>
+    </aside>
     <div class="nav-backdrop" id="nav-backdrop" aria-hidden="true"></div>
 
     <!-- HERO -->
@@ -460,9 +469,15 @@ function initInteractions() {
 function initMobileNav() {
   const nav = document.getElementById('nav');
   const toggle = document.getElementById('nav-toggle');
+  const drawer = document.getElementById('nav-drawer');
   const backdrop = document.getElementById('nav-backdrop');
 
-  if (!(nav instanceof HTMLElement) || !(toggle instanceof HTMLButtonElement) || !(backdrop instanceof HTMLDivElement)) {
+  if (
+    !(nav instanceof HTMLElement) ||
+    !(toggle instanceof HTMLButtonElement) ||
+    !(drawer instanceof HTMLElement) ||
+    !(backdrop instanceof HTMLDivElement)
+  ) {
     return;
   }
 
@@ -471,9 +486,11 @@ function initMobileNav() {
   setNavMenuOpen = (isOpen: boolean) => {
     const open = isOpen && mobileNav.matches;
     nav.classList.toggle('nav--open', open);
+    drawer.classList.toggle('nav__drawer--open', open);
     document.body.classList.toggle('nav-open', open);
     toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
     toggle.setAttribute('aria-label', open ? 'Close navigation menu' : 'Open navigation menu');
+    drawer.setAttribute('aria-hidden', open ? 'false' : 'true');
   };
 
   toggle.addEventListener('click', () => {
