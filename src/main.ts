@@ -9,6 +9,7 @@ const app = document.querySelector<HTMLDivElement>('#app')!;
 const GITHUB_USERNAME = 'greencookie-afk';
 const GITHUB_PROFILE_URL = `https://github.com/${GITHUB_USERNAME}`;
 const GITHUB_AVATAR_URL = `${GITHUB_PROFILE_URL}.png?size=480`;
+let setNavMenuOpen: ((isOpen: boolean) => void) | null = null;
 
 // ── DATA ──────────────────────────────────────────────────────
 
@@ -97,68 +98,85 @@ function render() {
       <div class="nav__logo">
         <span class="dot"></span>
       </div>
-      <ul class="nav__links">
-        <li><a href="#about">About</a></li>
-        <li><a href="#opensource">OSS</a></li>
-        <li><a href="#projects">Projects</a></li>
-        <li><a href="#creative">Creative</a></li>
-        <li><a href="#skills">Tech Stack</a></li>
-        <li><a href="#achievements">Achievements</a></li>
-        <li><a href="#contact">Contact</a></li>
-      </ul>
+      <button
+        class="nav__toggle"
+        id="nav-toggle"
+        type="button"
+        aria-label="Open navigation menu"
+        aria-expanded="false"
+        aria-controls="nav-links"
+      >
+        <span></span>
+        <span></span>
+        <span></span>
+      </button>
+      <div class="nav__drawer" id="nav-drawer">
+        <ul class="nav__links" id="nav-links">
+          <li><a href="#about">About</a></li>
+          <li><a href="#opensource">OSS</a></li>
+          <li><a href="#projects">Projects</a></li>
+          <li><a href="#creative">Creative</a></li>
+          <li><a href="#skills">Tech Stack</a></li>
+          <li><a href="#achievements">Achievements</a></li>
+          <li><a href="#contact">Contact</a></li>
+        </ul>
+      </div>
       <div class="nav__time" id="nav-time"></div>
     </nav>
+    <div class="nav-backdrop" id="nav-backdrop" aria-hidden="true"></div>
 
     <!-- HERO -->
     <section class="hero" id="hero">
       <div class="hero__inner">
         <div class="hero__layout">
-          <div class="hero__main">
-            <h1 class="hero__name reveal">
-              Mithun<br/>
-              Chakladar
-            </h1>
-            
-            <p class="hero__subtitle reveal reveal-delay-2">
-              Web developer, <span class="text-red">open source contributor</span>, and former graphic designer. 
-              Building systems that are engineered to last — not just to ship.
-            </p>
-
-            <div class="hero__meta reveal reveal-delay-3">
-              <div class="hero__meta-item">
-                <span class="label">Status</span>
-                <span class="value">Open to Opportunities</span>
-              </div>
-              <div class="hero__meta-item">
-                <span class="label">Location</span>
-                <span class="value">New Delhi, India</span>
-              </div>
-              <div class="hero__meta-item">
-                <span class="label">Stack</span>
-                <span class="value">React · Node · Python · Rust</span>
-              </div>
-              <div class="hero__meta-item">
-                <span class="label">OS</span>
-                <span class="value">arch user btw</span>
-              </div>
+          <div class="hero__headline">
+            <div class="hero__main">
+              <h1 class="hero__name reveal">
+                Mithun<br/>
+                Chakladar
+              </h1>
+            </div>
+            <div class="hero__side reveal reveal-delay-2">
+              <a
+                class="hero__photo"
+                href="${GITHUB_PROFILE_URL}"
+                target="_blank"
+                rel="noopener"
+                aria-label="Open Mithun Chakladar's GitHub profile"
+              >
+                <img
+                  class="hero__avatar"
+                  src="${GITHUB_AVATAR_URL}"
+                  alt="Mithun Chakladar GitHub profile photo"
+                  loading="eager"
+                  decoding="async"
+                />
+              </a>
             </div>
           </div>
-          <div class="hero__side reveal reveal-delay-2">
-            <a
-              class="hero__photo"
-              href="${GITHUB_PROFILE_URL}"
-              target="_blank"
-              rel="noopener"
-              aria-label="Open Mithun Chakladar's GitHub profile"
-            >
-              <img
-                class="hero__avatar"
-                src="${GITHUB_AVATAR_URL}"
-                alt="Mithun Chakladar GitHub profile photo"
-                loading="eager"
-                decoding="async"
-              />
-            </a>
+
+          <p class="hero__subtitle reveal reveal-delay-2">
+            Web developer, <span class="text-red">open source contributor</span>, and former graphic designer. 
+            Building systems that are engineered to last — not just to ship.
+          </p>
+
+          <div class="hero__meta reveal reveal-delay-3">
+            <div class="hero__meta-item">
+              <span class="label">Status</span>
+              <span class="value">Open to Opportunities</span>
+            </div>
+            <div class="hero__meta-item">
+              <span class="label">Location</span>
+              <span class="value">New Delhi, India</span>
+            </div>
+            <div class="hero__meta-item">
+              <span class="label">Stack</span>
+              <span class="value">React · Node · Python · Rust</span>
+            </div>
+            <div class="hero__meta-item">
+              <span class="label">OS</span>
+              <span class="value">arch user btw</span>
+            </div>
           </div>
         </div>
       </div>
@@ -430,12 +448,49 @@ function render() {
 
 function initInteractions() {
   initScrollProgress();
+  initMobileNav();
   initNavHide();
   initRevealObserver();
   initCursorDot();
   initNavTime();
   initCountUp();
   initSmoothScroll();
+}
+
+function initMobileNav() {
+  const nav = document.getElementById('nav');
+  const toggle = document.getElementById('nav-toggle');
+  const backdrop = document.getElementById('nav-backdrop');
+
+  if (!(nav instanceof HTMLElement) || !(toggle instanceof HTMLButtonElement) || !(backdrop instanceof HTMLDivElement)) {
+    return;
+  }
+
+  const mobileNav = window.matchMedia('(max-width: 860px)');
+
+  setNavMenuOpen = (isOpen: boolean) => {
+    const open = isOpen && mobileNav.matches;
+    nav.classList.toggle('nav--open', open);
+    document.body.classList.toggle('nav-open', open);
+    toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+    toggle.setAttribute('aria-label', open ? 'Close navigation menu' : 'Open navigation menu');
+  };
+
+  toggle.addEventListener('click', () => {
+    setNavMenuOpen?.(!nav.classList.contains('nav--open'));
+  });
+
+  backdrop.addEventListener('click', () => setNavMenuOpen?.(false));
+
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape') {
+      setNavMenuOpen?.(false);
+    }
+  });
+
+  mobileNav.addEventListener('change', () => {
+    setNavMenuOpen?.(false);
+  });
 }
 
 // Scroll progress bar
@@ -455,6 +510,12 @@ function initNavHide() {
   let lastScroll = 0;
 
   window.addEventListener('scroll', () => {
+    if (window.matchMedia('(max-width: 860px)').matches || nav.classList.contains('nav--open')) {
+      nav.classList.remove('hidden');
+      lastScroll = window.scrollY;
+      return;
+    }
+
     const currentScroll = window.scrollY;
     if (currentScroll > lastScroll && currentScroll > 100) {
       nav.classList.add('hidden');
@@ -563,9 +624,11 @@ function initSmoothScroll() {
       e.preventDefault();
       const href = (link as HTMLAnchorElement).getAttribute('href');
       if (href) {
-        let target = document.querySelector(href);
+        const target = document.querySelector(href);
         target?.scrollIntoView({ behavior: 'smooth', block: 'start' });
       }
+
+      setNavMenuOpen?.(false);
     });
   });
 }
