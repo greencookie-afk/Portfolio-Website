@@ -7,6 +7,80 @@ import './style.css';
 
 const app = document.querySelector<HTMLDivElement>('#app')!;
 
+const GITHUB_USERNAME = 'greencookie-afk';
+const GITHUB_PROFILE_URL = `https://github.com/${GITHUB_USERNAME}`;
+const GITHUB_ACTIVITY_REFRESH_MS = 5 * 60 * 1000;
+const GITHUB_CHART_BASE_URL = `https://ghchart.rshah.org/1A1A1A/${GITHUB_USERNAME}`;
+const MAX_GITHUB_ACTIVITY_ITEMS = 3;
+
+type GitHubProfile = {
+  public_repos: number;
+  followers: number;
+  html_url: string;
+};
+
+type GitHubEventPayload = {
+  action?: string;
+  comment?: {
+    html_url?: string;
+  };
+  commits?: Array<{
+    message: string;
+    sha?: string;
+    url?: string;
+  }>;
+  forkee?: {
+    full_name?: string;
+    html_url?: string;
+  };
+  issue?: {
+    number: number;
+    title: string;
+    html_url?: string;
+  };
+  pull_request?: {
+    number: number;
+    title: string;
+    html_url?: string;
+    merged_at?: string | null;
+  };
+  ref?: string;
+  ref_type?: string;
+  release?: {
+    html_url?: string;
+    name?: string;
+    tag_name?: string;
+  };
+};
+
+type GitHubEvent = {
+  type: string;
+  repo: {
+    name: string;
+  };
+  payload: GitHubEventPayload;
+  created_at: string;
+};
+
+type GitHubActivityItem = {
+  badge: string;
+  title: string;
+  detail: string;
+  href: string;
+  time: string;
+};
+
+type GitHubRateLimit = {
+  remaining: number | null;
+  resetAt: string | null;
+};
+
+let githubRefreshTimer: number | null = null;
+let githubActivityLoaded = false;
+let githubActivityInFlight: Promise<void> | null = null;
+let githubVisibilityListenerAttached = false;
+let githubProfileCache: GitHubProfile | null = null;
+
 // ── DATA ──────────────────────────────────────────────────────
 
 const PROJECTS = [
@@ -79,6 +153,40 @@ if (history.scrollRestoration) {
   history.scrollRestoration = 'manual';
 }
 
+function renderGitHubStatCards() {
+  return `
+    <div class="hero__github-stat hero__github-stat--loading">
+      <span class="hero__github-stat-label">Public Repos</span>
+      <span class="hero__github-stat-value">--</span>
+    </div>
+    <div class="hero__github-stat hero__github-stat--loading">
+      <span class="hero__github-stat-label">Followers</span>
+      <span class="hero__github-stat-value">--</span>
+    </div>
+    <div class="hero__github-stat hero__github-stat--loading">
+      <span class="hero__github-stat-label">Last Push</span>
+      <span class="hero__github-stat-value">Syncing</span>
+    </div>
+    <div class="hero__github-stat hero__github-stat--loading">
+      <span class="hero__github-stat-label">Focus Repo</span>
+      <span class="hero__github-stat-value">Loading</span>
+    </div>
+  `;
+}
+
+function renderGitHubFeedSkeleton() {
+  return Array.from({ length: MAX_GITHUB_ACTIVITY_ITEMS }, (_, index) => `
+    <div class="github-event github-event--loading reveal" style="--i:${index}">
+      <div class="github-event__meta">
+        <span class="github-event__badge">Sync</span>
+        <span class="github-event__time">...</span>
+      </div>
+      <div class="github-event__title">Loading latest public activity</div>
+      <div class="github-event__detail">Checking for pushes, pull requests, releases, and other GitHub updates.</div>
+    </div>
+  `).join('');
+}
+
 // ── RENDER ────────────────────────────────────────────────────
 
 function render() {
@@ -144,15 +252,34 @@ function render() {
           
           <!-- Side Content (GitHub Graph) -->
           <div class="hero__side reveal reveal-delay-3">
-            <div class="hero__github-header">
-              <span class="label">Live GitHub Activity</span>
-              <span class="value text-red" id="github-contrib-count">Fetching...</span>
-            </div>
-            <div class="hero__github-chart">
-              <a href="https://github.com/greencookie-afk" target="_blank" rel="noopener">
-                <!-- Uses 1A1A1A for the dark green blocks to match theme -->
-                <img src="https://ghchart.rshah.org/1A1A1A/greencookie-afk" alt="Mithun's GitHub Contributions" />
-              </a>
+            <div class="hero__github-card">
+              <div class="hero__github-header">
+                <div class="hero__github-heading">
+                  <span class="label">Live GitHub Activity</span>
+                  <span class="value text-red" id="github-sync-status">Syncing latest public updates...</span>
+                </div>
+                <a class="hero__github-profile" href="${GITHUB_PROFILE_URL}" target="_blank" rel="noopener">
+                  @${GITHUB_USERNAME}
+                </a>
+              </div>
+              <div class="hero__github-chart">
+                <a href="${GITHUB_PROFILE_URL}" target="_blank" rel="noopener">
+                  <img
+                    id="github-chart-image"
+                    src="${GITHUB_CHART_BASE_URL}?ts=${Date.now()}"
+                    alt="Mithun's GitHub contribution graph"
+                  />
+                </a>
+              </div>
+              <div class="hero__github-stats" id="github-stats">
+                ${renderGitHubStatCards()}
+              </div>
+              <div class="hero__github-feed stagger-children" id="github-feed">
+                ${renderGitHubFeedSkeleton()}
+              </div>
+              <div class="hero__github-note" id="github-meta-note">
+                Refreshes automatically every 5 minutes while the tab is active.
+              </div>
             </div>
           </div>
         </div>
@@ -418,36 +545,397 @@ function render() {
   `;
 
   initInteractions();
-  fetchGitHubContributions();
   window.scrollTo(0, 0); // Fix scroll preservation on reload
 }
 
 // ── INTERACTIONS ──────────────────────────────────────────────
 
-// Fetch GitHub contributions count via a public API proxy
-async function fetchGitHubContributions() {
-  try {
-    const ts = new Date().getTime();
-    // Cache bust using timestamp attached to github URL
-    const res = await fetch('https://api.allorigins.win/get?url=' + encodeURIComponent('https://github.com/greencookie-afk?t=' + ts));
-    if (!res.ok) throw new Error('API down');
-    const data = await res.json();
-    const html = data.contents;
-    // Use regex to find text like "164 contributions in the last year"
-    const match = html.match(/class="f4[^>]*>\s*([0-9,]+)\s*contributions/i);
-    const countEl = document.getElementById('github-contrib-count');
-    if (match && match[1] && countEl) {
-      countEl.textContent = match[1] + ' contributions done this year';
-    } else if (countEl) {
-      countEl.textContent = '';
+function buildGitHubApiUrl(path: string) {
+  return `https://api.github.com${path}`;
+}
+
+function formatCompactNumber(value: number) {
+  return new Intl.NumberFormat('en', {
+    notation: 'compact',
+    maximumFractionDigits: 1,
+  }).format(value);
+}
+
+function formatRelativeTime(input: string) {
+  const now = Date.now();
+  const target = new Date(input).getTime();
+  const diffMs = target - now;
+
+  const units: Array<[Intl.RelativeTimeFormatUnit, number]> = [
+    ['year', 1000 * 60 * 60 * 24 * 365],
+    ['month', 1000 * 60 * 60 * 24 * 30],
+    ['week', 1000 * 60 * 60 * 24 * 7],
+    ['day', 1000 * 60 * 60 * 24],
+    ['hour', 1000 * 60 * 60],
+    ['minute', 1000 * 60],
+    ['second', 1000],
+  ];
+
+  for (const [unit, size] of units) {
+    if (Math.abs(diffMs) >= size || unit === 'second') {
+      return new Intl.RelativeTimeFormat('en', { numeric: 'auto' }).format(Math.round(diffMs / size), unit);
     }
-  } catch (err) {
-    const countEl = document.getElementById('github-contrib-count');
-    if (countEl) countEl.textContent = '';
+  }
+
+  return 'just now';
+}
+
+function truncateText(value: string, maxLength: number) {
+  if (value.length <= maxLength) {
+    return value;
+  }
+
+  return `${value.slice(0, maxLength - 1).trimEnd()}…`;
+}
+
+function getRepoName(fullName: string) {
+  return fullName.split('/').pop() || fullName;
+}
+
+function getRepoUrl(fullName: string) {
+  return `https://github.com/${fullName}`;
+}
+
+function getRateLimit(response: Response): GitHubRateLimit {
+  const remaining = response.headers.get('x-ratelimit-remaining');
+  const reset = response.headers.get('x-ratelimit-reset');
+
+  return {
+    remaining: remaining ? Number.parseInt(remaining, 10) : null,
+    resetAt: reset ? new Date(Number.parseInt(reset, 10) * 1000).toISOString() : null,
+  };
+}
+
+function renderGitHubStats(profile: GitHubProfile, lastPushAt: string | null, recentRepo: string | null) {
+  const cards = [
+    { label: 'Public Repos', value: formatCompactNumber(profile.public_repos) },
+    { label: 'Followers', value: formatCompactNumber(profile.followers) },
+    { label: 'Last Push', value: lastPushAt ? formatRelativeTime(lastPushAt) : 'No recent push' },
+    { label: 'Focus Repo', value: recentRepo ? getRepoName(recentRepo) : 'No activity yet' },
+  ];
+
+  return cards.map((card) => `
+    <div class="hero__github-stat">
+      <span class="hero__github-stat-label">${card.label}</span>
+      <span class="hero__github-stat-value">${card.value}</span>
+    </div>
+  `).join('');
+}
+
+function renderGitHubFeed(items: GitHubActivityItem[]) {
+  if (!items.length) {
+    return `
+      <div class="hero__github-empty">
+        No recent public GitHub events yet. New pushes and updates will appear here automatically.
+      </div>
+    `;
+  }
+
+  return items.map((item) => `
+    <a class="github-event reveal visible" href="${item.href}" target="_blank" rel="noopener">
+      <div class="github-event__meta">
+        <span class="github-event__badge">${item.badge}</span>
+        <span class="github-event__time">${item.time}</span>
+      </div>
+      <div class="github-event__title">${item.title}</div>
+      <div class="github-event__detail">${item.detail}</div>
+    </a>
+  `).join('');
+}
+
+function summariseGitHubEvent(event: GitHubEvent): GitHubActivityItem | null {
+  const repoName = getRepoName(event.repo.name);
+  const repoUrl = getRepoUrl(event.repo.name);
+
+  switch (event.type) {
+    case 'PushEvent': {
+      const commits = event.payload.commits ?? [];
+      const commitCount = commits.length;
+      const firstCommit = commits[0]?.message?.split('\n')[0] ?? 'New commits pushed';
+
+      return {
+        badge: 'Push',
+        title: `Pushed to ${repoName}`,
+        detail: `${commitCount || 1} commit${commitCount === 1 ? '' : 's'} • ${truncateText(firstCommit, 72)}`,
+        href: commits[0]?.sha ? `${repoUrl}/commit/${commits[0].sha}` : `${repoUrl}/commits`,
+        time: formatRelativeTime(event.created_at),
+      };
+    }
+    case 'PullRequestEvent': {
+      const action = event.payload.pull_request?.merged_at ? 'Merged' : (event.payload.action ?? 'Updated');
+      const pullRequest = event.payload.pull_request;
+      const actionLabel = action.charAt(0).toUpperCase() + action.slice(1);
+      const badge =
+        action === 'Merged'
+          ? 'Merged'
+          : action === 'opened'
+            ? 'PR'
+            : action === 'closed'
+              ? 'Closed'
+              : action === 'reopened'
+                ? 'Reopened'
+                : 'PR';
+
+      if (!pullRequest) {
+        return null;
+      }
+
+      return {
+        badge,
+        title: `${actionLabel} PR in ${repoName}`,
+        detail: `#${pullRequest.number} • ${truncateText(pullRequest.title, 72)}`,
+        href: pullRequest.html_url ?? repoUrl,
+        time: formatRelativeTime(event.created_at),
+      };
+    }
+    case 'PullRequestReviewEvent': {
+      const pullRequest = event.payload.pull_request;
+
+      if (!pullRequest) {
+        return null;
+      }
+
+      return {
+        badge: 'Review',
+        title: `Reviewed PR in ${repoName}`,
+        detail: `#${pullRequest.number} • ${truncateText(pullRequest.title, 72)}`,
+        href: pullRequest.html_url ?? repoUrl,
+        time: formatRelativeTime(event.created_at),
+      };
+    }
+    case 'IssuesEvent': {
+      const issue = event.payload.issue;
+
+      if (!issue) {
+        return null;
+      }
+
+      return {
+        badge: event.payload.action === 'opened' ? 'Issue' : 'Update',
+        title: `${event.payload.action === 'opened' ? 'Opened' : 'Updated'} issue in ${repoName}`,
+        detail: `#${issue.number} • ${truncateText(issue.title, 72)}`,
+        href: issue.html_url ?? repoUrl,
+        time: formatRelativeTime(event.created_at),
+      };
+    }
+    case 'IssueCommentEvent': {
+      const issue = event.payload.issue;
+
+      if (!issue) {
+        return null;
+      }
+
+      return {
+        badge: 'Comment',
+        title: `Commented in ${repoName}`,
+        detail: `#${issue.number} • ${truncateText(issue.title, 72)}`,
+        href: event.payload.comment?.html_url ?? issue.html_url ?? repoUrl,
+        time: formatRelativeTime(event.created_at),
+      };
+    }
+    case 'CreateEvent': {
+      const refType = event.payload.ref_type ?? 'resource';
+      const refName = event.payload.ref ?? repoName;
+
+      return {
+        badge: 'Create',
+        title: `Created ${refType} in ${repoName}`,
+        detail: truncateText(refName, 72),
+        href: repoUrl,
+        time: formatRelativeTime(event.created_at),
+      };
+    }
+    case 'ReleaseEvent': {
+      const release = event.payload.release;
+
+      return {
+        badge: 'Release',
+        title: `Published release in ${repoName}`,
+        detail: truncateText(release?.name ?? release?.tag_name ?? 'New release', 72),
+        href: release?.html_url ?? repoUrl,
+        time: formatRelativeTime(event.created_at),
+      };
+    }
+    case 'ForkEvent': {
+      return {
+        badge: 'Fork',
+        title: `Forked ${repoName}`,
+        detail: truncateText(event.payload.forkee?.full_name ?? repoName, 72),
+        href: event.payload.forkee?.html_url ?? repoUrl,
+        time: formatRelativeTime(event.created_at),
+      };
+    }
+    case 'WatchEvent': {
+      return {
+        badge: 'Star',
+        title: `Starred ${repoName}`,
+        detail: 'Saved for future work and exploration.',
+        href: repoUrl,
+        time: formatRelativeTime(event.created_at),
+      };
+    }
+    default:
+      return null;
+  }
+}
+
+async function fetchGitHubActivity() {
+  const eventsRequest = fetch(buildGitHubApiUrl(`/users/${GITHUB_USERNAME}/events/public?per_page=12`), {
+    headers: {
+      Accept: 'application/vnd.github+json',
+    },
+  });
+
+  const profileRequest = githubProfileCache
+    ? Promise.resolve(null)
+    : fetch(buildGitHubApiUrl(`/users/${GITHUB_USERNAME}`), {
+        headers: {
+          Accept: 'application/vnd.github+json',
+        },
+      });
+
+  const [eventsResponse, profileResponse] = await Promise.all([
+    eventsRequest,
+    profileRequest,
+  ]);
+
+  const rateLimit = getRateLimit(eventsResponse);
+
+  if (!eventsResponse.ok || (profileResponse && !profileResponse.ok)) {
+    if (eventsResponse.status === 403 && rateLimit.remaining === 0) {
+      throw new Error(`GitHub API rate limit reached until ${formatRelativeTime(rateLimit.resetAt ?? new Date().toISOString())}`);
+    }
+
+    throw new Error('Unable to reach the GitHub activity feed right now.');
+  }
+
+  const profile = profileResponse
+    ? await profileResponse.json() as GitHubProfile
+    : githubProfileCache;
+  const events = await eventsResponse.json() as GitHubEvent[];
+
+  if (!profile) {
+    throw new Error('Unable to load the GitHub profile details right now.');
+  }
+
+  githubProfileCache = profile;
+
+  const items = events
+    .map((event) => summariseGitHubEvent(event))
+    .filter((item): item is GitHubActivityItem => item !== null)
+    .slice(0, MAX_GITHUB_ACTIVITY_ITEMS);
+
+  const latestPush = events.find((event) => event.type === 'PushEvent');
+  const latestRepo = events.find((event) => event.repo?.name);
+
+  return {
+    items,
+    lastPushAt: latestPush?.created_at ?? null,
+    profile,
+    rateLimit,
+    recentRepo: latestRepo?.repo.name ?? null,
+  };
+}
+
+function updateGitHubChart() {
+  const chart = document.getElementById('github-chart-image') as HTMLImageElement | null;
+
+  if (chart) {
+    chart.src = `${GITHUB_CHART_BASE_URL}?ts=${Date.now()}`;
+  }
+}
+
+function setGitHubStatus(message: string) {
+  const statusEl = document.getElementById('github-sync-status');
+
+  if (statusEl) {
+    statusEl.textContent = message;
+  }
+}
+
+function setGitHubMetaNote(message: string) {
+  const noteEl = document.getElementById('github-meta-note');
+
+  if (noteEl) {
+    noteEl.textContent = message;
+  }
+}
+
+async function refreshGitHubActivity() {
+  if (githubActivityInFlight) {
+    return githubActivityInFlight;
+  }
+
+  githubActivityInFlight = (async () => {
+    if (githubActivityLoaded) {
+      setGitHubStatus('Refreshing GitHub feed...');
+    }
+
+    try {
+      const activity = await fetchGitHubActivity();
+      const statsEl = document.getElementById('github-stats');
+      const feedEl = document.getElementById('github-feed');
+
+      if (statsEl) {
+        statsEl.innerHTML = renderGitHubStats(activity.profile, activity.lastPushAt, activity.recentRepo);
+      }
+
+      if (feedEl) {
+        feedEl.innerHTML = renderGitHubFeed(activity.items);
+      }
+
+      const lastSync = formatRelativeTime(new Date().toISOString());
+      setGitHubStatus(activity.lastPushAt ? `Latest push ${formatRelativeTime(activity.lastPushAt)}` : 'Watching for new GitHub activity');
+      setGitHubMetaNote(
+        activity.rateLimit.remaining !== null
+          ? `Last synced ${lastSync}. Auto-refresh runs every 5 minutes while active.`
+          : 'Auto-refresh runs every 5 minutes while the tab is active.'
+      );
+      updateGitHubChart();
+      githubActivityLoaded = true;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unable to load live GitHub activity.';
+      setGitHubStatus(message);
+      setGitHubMetaNote('The feed will retry automatically while the tab remains open.');
+    } finally {
+      githubActivityInFlight = null;
+    }
+  })();
+
+  return githubActivityInFlight;
+}
+
+function initGitHubActivity() {
+  if (githubRefreshTimer !== null) {
+    window.clearInterval(githubRefreshTimer);
+  }
+
+  void refreshGitHubActivity();
+
+  githubRefreshTimer = window.setInterval(() => {
+    if (!document.hidden) {
+      void refreshGitHubActivity();
+    }
+  }, GITHUB_ACTIVITY_REFRESH_MS);
+
+  if (!githubVisibilityListenerAttached) {
+    document.addEventListener('visibilitychange', () => {
+      if (!document.hidden) {
+        void refreshGitHubActivity();
+      }
+    });
+
+    githubVisibilityListenerAttached = true;
   }
 }
 
 function initInteractions() {
+  initGitHubActivity();
   initScrollProgress();
   initNavHide();
   initRevealObserver();
