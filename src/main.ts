@@ -6,6 +6,9 @@ import './style.css';
 // ═══════════════════════════════════════════════════════════════
 
 const app = document.querySelector<HTMLDivElement>('#app')!;
+const GITHUB_USERNAME = 'greencookie-afk';
+const GITHUB_PROFILE_URL = `https://github.com/${GITHUB_USERNAME}`;
+const GITHUB_AVATAR_URL = `${GITHUB_PROFILE_URL}.png?size=480`;
 
 // ── DATA ──────────────────────────────────────────────────────
 
@@ -15,7 +18,7 @@ const PROJECTS = [
     desc: 'Peer-to-peer mental health support platform connecting listeners with users through real-time video calls and escrow payments.',
     tech: ['Next.js', 'TypeScript', 'PeerJS', 'Stripe', 'Prisma'],
     github: 'https://github.com/greencookie-afk/konfide',
-    live: 'https://konfide-web.vercel.app', 
+    live: 'https://konfide-flame.vercel.app',
   },
   {
     name: 'CareLine',
@@ -29,14 +32,14 @@ const PROJECTS = [
     desc: 'Gig-based esports platform for gamers — built at Ignite Arena IIIT, a 36-hour offline hackathon.',
     tech: ['JavaScript', 'React', 'Node.js', 'Socket.io'],
     github: 'https://github.com/greencookie-afk/versatile-frontend',
-    live: 'https://versatile-esports.vercel.app',
+    live: '',
   },
   {
     name: 'SkillLink',
     desc: 'Blockchain-powered decentralized learning platform built at GITM 24hr hackathon.',
     tech: ['Solidity', 'React', 'Web3.js', 'IPFS'],
     github: 'https://github.com/greencookie-afk/learnChain-dapp',
-    live: '',
+    live: 'https://learn-chain-dapp.vercel.app',
   },
 ];
 
@@ -139,6 +142,23 @@ function render() {
                 <span class="value">arch user btw</span>
               </div>
             </div>
+          </div>
+          <div class="hero__side reveal reveal-delay-2">
+            <a
+              class="hero__photo"
+              href="${GITHUB_PROFILE_URL}"
+              target="_blank"
+              rel="noopener"
+              aria-label="Open Mithun Chakladar's GitHub profile"
+            >
+              <img
+                class="hero__avatar"
+                src="${GITHUB_AVATAR_URL}"
+                alt="Mithun Chakladar GitHub profile photo"
+                loading="eager"
+                decoding="async"
+              />
+            </a>
           </div>
         </div>
       </div>
