@@ -99,7 +99,8 @@ function render() {
         <li><a href="#opensource">OSS</a></li>
         <li><a href="#projects">Projects</a></li>
         <li><a href="#creative">Creative</a></li>
-
+        <li><a href="#skills">Tech Stack</a></li>
+        <li><a href="#achievements">Achievements</a></li>
         <li><a href="#contact">Contact</a></li>
       </ul>
       <div class="nav__time" id="nav-time"></div>
@@ -341,7 +342,7 @@ function render() {
       <div class="section__inner">
         <div class="section__label reveal">
           <span>Achievements</span>
-          <span>07</span>
+          <span>06</span>
         </div>
         <div class="about__grid">
           <div class="about__text reveal">
@@ -384,7 +385,7 @@ function render() {
       <div class="contact__inner">
         <div class="section__label reveal" style="color: rgba(255,255,255,0.35); border-color: rgba(255,255,255,0.08);">
           <span class="text-red">Get in Touch</span>
-          <span>08</span>
+          <span>07</span>
         </div>
         <div class="contact__header reveal">
           <h2>Let's build<br/>something real.</h2>
