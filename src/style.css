@@ -184,6 +184,7 @@ body:hover #cursor-dot {
   gap: var(--space-xl);
   list-style: none;
   min-width: 0;
+  scrollbar-width: none;
 }
 
 .nav__links a {
@@ -329,11 +330,46 @@ body:hover #cursor-dot {
 }
 
 .hero__layout {
-  display: block;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(180px, 240px);
+  gap: clamp(32px, 5vw, 72px);
+  align-items: center;
 }
 
 .hero__main {
+  min-width: 0;
   max-width: 100%;
+}
+
+.hero__side {
+  width: 100%;
+  max-width: 240px;
+  justify-self: center;
+}
+
+.hero__photo {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  aspect-ratio: 1;
+  padding: 14px;
+  border: var(--border);
+  border-radius: 32px;
+  background:
+    radial-gradient(circle at top left, rgba(217, 56, 30, 0.12), transparent 42%),
+    linear-gradient(145deg, rgba(255, 255, 255, 0.96), rgba(244, 244, 244, 0.96));
+  box-shadow: 16px 16px 0 rgba(0, 0, 0, 0.08);
+  transition:
+    transform var(--transition-base),
+    box-shadow var(--transition-base),
+    border-color var(--transition-fast);
+}
+
+.hero__photo:hover {
+  transform: translate(-4px, -4px);
+  border-color: var(--black);
+  box-shadow: 20px 20px 0 rgba(0, 0, 0, 0.1);
 }
 
 .hero__name {
@@ -472,6 +508,7 @@ body:hover #cursor-dot {
   position: relative;
   overflow: hidden;
   cursor: pointer;
+  overflow-wrap: anywhere;
 }
 
 .skill-tag::before {
@@ -1109,8 +1146,21 @@ body:hover #cursor-dot {
     --space-5xl: 88px;
   }
 
+  .nav.hidden {
+    transform: translateY(0);
+  }
+
   .hero__name {
     font-size: clamp(46px, 13vw, 82px);
+  }
+
+  .hero__layout {
+    grid-template-columns: 1fr;
+    gap: var(--space-2xl);
+  }
+
+  .hero__side {
+    max-width: 220px;
   }
 
   .hero__subtitle {
@@ -1135,7 +1185,13 @@ body:hover #cursor-dot {
   }
 
   .skills__grid {
-    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .skill-tag {
+    padding: 16px 10px;
+    font-size: 11px;
+    line-height: 1.3;
   }
 
   .section {
@@ -1149,20 +1205,66 @@ body:hover #cursor-dot {
 
 @media (max-width: 640px) {
   :root {
+    --nav-height: 88px;
     --space-4xl: 56px;
     --space-5xl: 72px;
   }
 
+  .nav {
+    height: auto;
+    min-height: var(--nav-height);
+    flex-wrap: wrap;
+    align-items: flex-start;
+    gap: var(--space-sm);
+    padding-top: 8px;
+    padding-bottom: 8px;
+  }
+
   .nav__links {
+    flex: 1 0 100%;
+    order: 2;
     gap: var(--space-md);
+    padding-top: 4px;
+    overflow-x: auto;
   }
 
   .nav__links a {
-    font-size: 11px;
+    display: inline-flex;
+    align-items: center;
+    min-height: 28px;
+    padding: 0 8px;
+    font-size: 10px;
+    letter-spacing: 0.04em;
+    background: rgba(0, 0, 0, 0.04);
+    border: 1px solid rgba(0, 0, 0, 0.06);
+  }
+
+  .nav__links a::after {
+    display: none;
   }
 
   .hero__subtitle {
     font-size: 15px;
+  }
+
+  .hero__side {
+    max-width: 180px;
+  }
+
+  .hero__photo {
+    padding: 10px;
+    border-radius: 24px;
+    box-shadow: 12px 12px 0 rgba(0, 0, 0, 0.08);
+  }
+
+  .skills__grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .skill-tag {
+    padding: 13px 8px;
+    font-size: 10.5px;
+    line-height: 1.3;
   }
 
   .stat-card,
@@ -1192,6 +1294,7 @@ body:hover #cursor-dot {
 
 @media (max-width: 420px) {
   :root {
+    --nav-height: 96px;
     --space-2xl: 40px;
     --space-3xl: 52px;
     --space-4xl: 48px;
@@ -1202,7 +1305,22 @@ body:hover #cursor-dot {
   }
 
   .skills__grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .nav__links {
+    gap: var(--space-sm);
+  }
+
+  .nav__links a {
+    min-height: 26px;
+    padding: 0 7px;
+    font-size: 9px;
+  }
+
+  .skill-tag {
+    padding: 11px 6px;
+    font-size: 9.5px;
   }
 
   .section {
@@ -1263,13 +1381,14 @@ body:hover #cursor-dot {
 }
 
 .hero__avatar {
-  width: 140px;
-  height: 140px;
+  width: 100%;
+  height: 100%;
   border-radius: 50%;
   object-fit: cover;
   border: 4px solid var(--black);
-  box-shadow: 8px 8px 0px rgba(0, 0, 0, 0.1);
+  box-shadow: 10px 10px 0 rgba(0, 0, 0, 0.09);
   display: block;
+  background: var(--off-white);
 }
 
 /* ── INSTAGRAM GRID (Lichi of Heaven) ───────────────────────── */
